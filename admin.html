@@ -1,22 +1,191 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administrador — RIFA RD PRO</title><link rel="stylesheet" href="styles.css"></head><body>
-<header class="topbar"><div class="container nav"><a class="brand" href="index.html"><span class="logo">RD</span><span>RIFA RD <span style="color:#67e8f9">PRO</span></span></a><div class="nav-actions"><a class="btn btn-secondary" href="index.html">Ver página pública</a></div></div></header>
-<main class="admin-wrap"><div class="container"><div class="section-head"><div><span class="eyebrow">PANEL PRIVADO</span><h2>Administrador de rifas</h2></div><p>Controla boletos, precio, inventario y ejecuta un sorteo electrónico de demostración.</p></div><div class="notice" style="margin-bottom:18px"><b>Modo demo:</b> el sorteo aquí ocurre en el navegador. En producción debe ejecutarse en servidor con RNG criptográfico, cierre de participantes y registro de auditoría inmutable.</div>
-<div class="kpi-grid" style="margin-bottom:18px"><div class="kpi"><b id="kpiTotal">5,000</b><span>boletos configurados</span></div><div class="kpi"><b id="kpiPrice">RD$500</b><span>precio por boleto</span></div><div class="kpi"><b id="kpiSold">—</b><span>vendidos demo</span></div></div>
-<div class="admin-grid"><section class="admin-panel"><h3>Configuración de la rifa</h3><div class="field"><label>Nombre de la rifa</label><input id="raffleName" value="Motor Street Black"></div><div class="field"><label>Cantidad de boletos</label><input id="raffleTotal" type="number" min="100" max="100000" step="100" value="5000"></div><div class="field"><label>Precio por boleto (RD$)</label><input id="rafflePrice" type="number" min="1" value="500"></div><div class="field"><label>Estado</label><select><option>Activa</option><option>Pausada</option><option>Cerrada</option></select></div><button class="btn btn-primary" onclick="saveConfig()">Guardar configuración</button></section>
-<section class="admin-panel"><h3>Sorteo electrónico</h3><p class="muted">El botón escoge entre números marcados como vendidos en esta demo. No permite escribir manualmente el ganador.</p><div id="winner" class="winner">—</div><button class="btn btn-gold" style="width:100%" onclick="drawWinner()">🏆 REALIZAR SORTEO DEMO</button><button class="btn btn-secondary" style="width:100%;margin-top:9px" onclick="resetWinner()">Reiniciar demostración</button></section>
-<section class="admin-panel"><h3>Acciones rápidas</h3><div class="field"><label>Marcar número como vendido</label><input id="markSold" type="number" min="1" placeholder="Ej. 2847"></div><button class="btn btn-secondary" onclick="addSold()">Agregar venta demo</button><div class="field"><label>Buscar boleto</label><input id="lookup" type="number" placeholder="Número"></div><button class="btn btn-secondary" onclick="lookupTicket()">Consultar estado</button><p id="lookupResult" class="muted"></p></section>
-<section class="admin-panel"><h3>Registro de auditoría demo</h3><div id="log" class="log">Sistema iniciado. Esperando acciones…</div></section></div></div></main>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05070b">
+<title>Administrador | RIFA RD PRO</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="announcement">🔐 PANEL DE DEMOSTRACIÓN · RIFA RD PRO</div>
+<header class="topbar">
+  <div class="container nav">
+    <a class="brand" href="index.html"><span class="logo">RD</span><span>RIFA RD <em>PRO</em></span></a>
+    <div class="nav-actions"><a class="btn btn-secondary" href="index.html">← Página pública</a></div>
+  </div>
+</header>
+
+<main class="admin-wrap">
+<div class="container">
+  <div class="section-head">
+    <div><span class="eyebrow">ADMINISTRADOR</span><h2>Centro de control</h2></div>
+    <p>Gestiona configuración, números, solicitudes de compra de demostración y el sorteo electrónico.</p>
+  </div>
+
+  <div class="notice" style="margin-bottom:18px"><b>Importante:</b> este panel todavía funciona localmente en el navegador. Antes de operar ventas reales se conectará autenticación, base de datos, pagos y auditoría del servidor.</div>
+
+  <div class="kpi-grid" style="margin-bottom:18px">
+    <div class="kpi"><b id="kpiTotal">5,000</b><span>boletos configurados</span></div>
+    <div class="kpi"><b id="kpiSold">—</b><span>vendidos demo</span></div>
+    <div class="kpi"><b id="kpiPending">0</b><span>solicitudes pendientes</span></div>
+  </div>
+
+  <div class="admin-grid">
+    <section class="admin-panel">
+      <span class="eyebrow">CONFIGURACIÓN</span>
+      <h3 style="margin-top:12px">Rifa principal</h3>
+      <div class="field"><label>Nombre de la rifa</label><input id="raffleName" value="Motor Street Black"></div>
+      <div class="field"><label>Cantidad total de números</label><input id="raffleTotal" type="number" min="100" max="100000" step="100" value="5000"></div>
+      <div class="field"><label>Precio por boleto (RD$)</label><input id="rafflePrice" type="number" min="1" value="500"></div>
+      <div class="field"><label>Estado</label><select id="raffleStatus"><option>Activa</option><option>Pausada</option><option>Cerrada</option></select></div>
+      <button class="btn btn-primary full" onclick="saveConfig()">Guardar cambios</button>
+    </section>
+
+    <section class="admin-panel">
+      <span class="eyebrow">SORTEO</span>
+      <h3 style="margin-top:12px">Ganador electrónico</h3>
+      <p class="muted">Escoge aleatoriamente entre números marcados como vendidos. No permite escribir manualmente el ganador.</p>
+      <div id="winner" class="winner">—</div>
+      <button class="btn btn-gold full" onclick="drawWinner()">🏆 REALIZAR SORTEO DEMO</button>
+      <button class="btn btn-secondary full" style="margin-top:9px" onclick="resetWinner()">Reiniciar resultado</button>
+    </section>
+
+    <section class="admin-panel">
+      <span class="eyebrow">BOLETOS</span>
+      <h3 style="margin-top:12px">Gestionar números</h3>
+      <div class="field"><label>Marcar número como vendido</label><input id="markSold" type="number" min="1" placeholder="Ej. 2847"></div>
+      <button class="btn btn-secondary" onclick="addSold()">Marcar vendido</button>
+      <div class="field"><label>Consultar número</label><input id="lookup" type="number" placeholder="Número"></div>
+      <button class="btn btn-secondary" onclick="lookupTicket()">Consultar estado</button>
+      <p id="lookupResult" class="muted"></p>
+    </section>
+
+    <section class="admin-panel">
+      <span class="eyebrow">SOLICITUDES</span>
+      <h3 style="margin-top:12px">Compras demo</h3>
+      <div id="orders" class="orders-list"></div>
+      <button class="btn btn-secondary full" style="margin-top:10px" onclick="clearOrders()">Limpiar solicitudes demo</button>
+    </section>
+
+    <section class="admin-panel" style="grid-column:1/-1">
+      <span class="eyebrow">AUDITORÍA</span>
+      <h3 style="margin-top:12px">Registro de actividad demo</h3>
+      <div id="log" class="log">Sistema iniciado. Esperando acciones…</div>
+    </section>
+  </div>
+</div>
+</main>
+
 <script>
 const fmt=n=>new Intl.NumberFormat('es-DO',{style:'currency',currency:'DOP',maximumFractionDigits:0}).format(n);
-const getSold=()=>{let x=localStorage.getItem('sold_numbers');if(x)return new Set(JSON.parse(x));let s=new Set();let t=Number(localStorage.getItem('raffle_total')||5000);for(let i=7;i<=t;i+=17)s.add(i);return s};
+const label=n=>String(n).padStart(4,'0');
+const getSold=()=>{
+  let x=localStorage.getItem('sold_numbers');
+  if(x)return new Set(JSON.parse(x));
+  let s=new Set(),t=Number(localStorage.getItem('raffle_total')||5000);
+  for(let i=7;i<=t;i+=17)s.add(i);
+  return s;
+};
 let sold=getSold();
-function log(m){const el=document.getElementById('log');el.innerHTML=`[${new Date().toLocaleString('es-DO')}] ${m}<br>`+el.innerHTML}
-function refresh(){let total=Number(localStorage.getItem('raffle_total')||5000),price=Number(localStorage.getItem('raffle_price')||500);document.getElementById('raffleTotal').value=total;document.getElementById('rafflePrice').value=price;document.getElementById('kpiTotal').textContent=total.toLocaleString();document.getElementById('kpiPrice').textContent=fmt(price);document.getElementById('kpiSold').textContent=sold.size.toLocaleString()}
-function saveConfig(){const total=Number(document.getElementById('raffleTotal').value),price=Number(document.getElementById('rafflePrice').value);localStorage.setItem('raffle_total',total);localStorage.setItem('raffle_price',price);log(`Configuración guardada: ${total} boletos a ${fmt(price)}.`);refresh()}
-function cryptoIndex(max){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%max}
-function drawWinner(){if(!sold.size)return alert('No hay boletos vendidos en la demo.');const arr=[...sold];const w=arr[cryptoIndex(arr.length)];document.getElementById('winner').textContent=String(w).padStart(4,'0');localStorage.setItem('demo_winner',w);log(`Sorteo ejecutado. Ganador demo: #${String(w).padStart(4,'0')}.`)}
-function resetWinner(){document.getElementById('winner').textContent='—';localStorage.removeItem('demo_winner');log('Resultado demo reiniciado.')}
-function addSold(){const n=Number(document.getElementById('markSold').value),total=Number(localStorage.getItem('raffle_total')||5000);if(n<1||n>total)return alert('Número fuera de rango.');sold.add(n);localStorage.setItem('sold_numbers',JSON.stringify([...sold]));log(`Boleto #${String(n).padStart(4,'0')} marcado como vendido.`);refresh()}
-function lookupTicket(){const n=Number(document.getElementById('lookup').value);document.getElementById('lookupResult').textContent=sold.has(n)?`#${String(n).padStart(4,'0')}: VENDIDO`:`#${String(n).padStart(4,'0')}: DISPONIBLE`}
-refresh();const w=localStorage.getItem('demo_winner');if(w)document.getElementById('winner').textContent=String(w).padStart(4,'0');
-</script></body></html>
+
+function log(m){
+  const el=document.getElementById('log');
+  el.innerHTML=`[${new Date().toLocaleString('es-DO')}] ${m}<br>`+el.innerHTML;
+}
+function refresh(){
+  const total=Number(localStorage.getItem('raffle_total')||5000);
+  const price=Number(localStorage.getItem('raffle_price')||500);
+  const orders=JSON.parse(localStorage.getItem('demo_orders')||'[]');
+  document.getElementById('raffleTotal').value=total;
+  document.getElementById('rafflePrice').value=price;
+  document.getElementById('kpiTotal').textContent=total.toLocaleString();
+  document.getElementById('kpiSold').textContent=sold.size.toLocaleString();
+  document.getElementById('kpiPending').textContent=orders.length.toLocaleString();
+  renderOrders();
+}
+function saveConfig(){
+  const total=Number(document.getElementById('raffleTotal').value);
+  const price=Number(document.getElementById('rafflePrice').value);
+  if(total<100||price<1)return alert('Revisa la cantidad de boletos y el precio.');
+  localStorage.setItem('raffle_total',total);
+  localStorage.setItem('raffle_price',price);
+  log(`Configuración guardada: ${total.toLocaleString()} boletos a ${fmt(price)}.`);
+  refresh();
+}
+function cryptoIndex(max){
+  const a=new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0]%max;
+}
+function drawWinner(){
+  if(!sold.size)return alert('No hay boletos vendidos en la demo.');
+  const arr=[...sold];
+  const w=arr[cryptoIndex(arr.length)];
+  document.getElementById('winner').textContent=label(w);
+  localStorage.setItem('demo_winner',w);
+  log(`Sorteo demo ejecutado. Ganador: #${label(w)}.`);
+}
+function resetWinner(){
+  document.getElementById('winner').textContent='—';
+  localStorage.removeItem('demo_winner');
+  log('Resultado demo reiniciado.');
+}
+function addSold(){
+  const n=Number(document.getElementById('markSold').value);
+  const total=Number(localStorage.getItem('raffle_total')||5000);
+  if(n<1||n>total)return alert('Número fuera de rango.');
+  sold.add(n);
+  localStorage.setItem('sold_numbers',JSON.stringify([...sold]));
+  log(`Boleto #${label(n)} marcado como vendido.`);
+  refresh();
+}
+function lookupTicket(){
+  const n=Number(document.getElementById('lookup').value);
+  const total=Number(localStorage.getItem('raffle_total')||5000);
+  const out=document.getElementById('lookupResult');
+  if(!n||n<1||n>total){out.textContent='Número fuera de rango.';return}
+  out.textContent=sold.has(n)?`#${label(n)}: VENDIDO`:`#${label(n)}: DISPONIBLE`;
+}
+function renderOrders(){
+  const holder=document.getElementById('orders');
+  const orders=JSON.parse(localStorage.getItem('demo_orders')||'[]');
+  if(!orders.length){
+    holder.innerHTML='<p class="muted">No hay solicitudes demo en este navegador.</p>';
+    return;
+  }
+  holder.innerHTML=orders.slice(0,8).map((o,i)=>`
+    <div class="order-row">
+      <div><b>${o.id}</b><small>${o.name} · ${o.phone}</small><small>${o.numbers.map(label).join(', ')}</small></div>
+      <div><strong>${fmt(o.total)}</strong><button onclick="approveOrder(${i})">Aprobar demo</button></div>
+    </div>`).join('');
+}
+function approveOrder(index){
+  const orders=JSON.parse(localStorage.getItem('demo_orders')||'[]');
+  const o=orders[index]; if(!o)return;
+  o.numbers.forEach(n=>sold.add(n));
+  localStorage.setItem('sold_numbers',JSON.stringify([...sold]));
+  orders.splice(index,1);
+  localStorage.setItem('demo_orders',JSON.stringify(orders));
+  log(`Solicitud ${o.id} aprobada en demo; números marcados como vendidos.`);
+  refresh();
+}
+function clearOrders(){
+  if(!confirm('¿Eliminar todas las solicitudes de demostración de este navegador?'))return;
+  localStorage.removeItem('demo_orders');
+  log('Solicitudes demo eliminadas.');
+  refresh();
+}
+refresh();
+const w=localStorage.getItem('demo_winner');
+if(w)document.getElementById('winner').textContent=label(w);
+</script>
+<style>
+.orders-list{display:grid;gap:9px;max-height:330px;overflow:auto}
+.order-row{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#080d14;border:1px solid #19263a;border-radius:13px;padding:11px}
+.order-row>div{display:grid;gap:3px}.order-row small{color:#8190a5;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-row>div:last-child{text-align:right}.order-row button{margin-top:5px;border:1px solid #26405a;background:#102235;color:#67e8f9;border-radius:9px;padding:6px 8px;font-weight:800;cursor:pointer}
+@media(max-width:650px){.order-row{align-items:flex-start;display:grid}.order-row>div:last-child{text-align:left}}
+</style>
+</body>
+</html>
